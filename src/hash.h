@@ -165,6 +165,41 @@ public:
     }
 };
 
+/** A writer stream (for serialization) that computes a 256-bit hash. */
+class CBytesWriter {
+private:
+    CHash256 ctx;
+    //const int nType;
+    //const int nVersion;
+
+public:
+    int bytes;
+    uint8_t buf[409600];
+    CBytesWriter() {bytes = 0;}
+
+    //int GetType() const { return nType; }
+    //int GetVersion() const { return nVersion; }
+
+    void write(const char *pch, size_t size) {
+        memcpy(buf + bytes, pch, size);
+        bytes += size;
+    }
+
+    // invalidates the object
+    uint256 GetHash() {
+        ctx.Write((const uint8_t*)buf, bytes);
+        uint256 result;
+        ctx.Finalize((uint8_t *)&result);
+        return result;
+    }
+
+    template <typename T> CBytesWriter &operator<<(const T &obj) {
+        // Serialize to this stream
+        ::Serialize(*this, obj);
+        return (*this);
+    }
+};
+
 /**
  * Reads data from an underlying stream, while hashing the read data.
  */
