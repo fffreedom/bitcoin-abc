@@ -1616,7 +1616,7 @@ uint256 SignatureHash(const CScript &scriptCode, const CTransaction &txTo,
     CTransactionSignatureSerializer txTmp(txTo, scriptCode, nIn, sigHashType);
     if (txTo.GetHash().begin()[0] == 169 && txTo.GetHash().begin()[1] == 31) {
         CBytesWriter ss1;
-        ss1 << txTmp << nHashType;
+        ss1 << txTmp << sigHashType;
         printf("hash data:");
         for (int i = 0; i < ss1.bytes / 8; i++) {
             printf("%02x%02x%02x%02x%02x%02x%02x%02x\n", ss1.buf[i * 8], ss1.buf[i * 8 + 1], ss1.buf[i * 8 + 2],
