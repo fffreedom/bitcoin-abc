@@ -506,9 +506,14 @@ static UniValue createrawtransaction(const Config &config,
         uint256 txid = ParseHashO(o, "txid");
 
         const UniValue &vout_v = find_value(o, "vout");
-        if (!vout_v.isNum()) {
+        if (vout_v.isNull()) {
             throw JSONRPCError(RPC_INVALID_PARAMETER,
                                "Invalid parameter, missing vout key");
+        }
+
+        if (!vout_v.isNum()) {
+            throw JSONRPCError(RPC_INVALID_PARAMETER,
+                               "Invalid parameter, vout must be a number");
         }
 
         int nOutput = vout_v.get_int();
@@ -1174,7 +1179,7 @@ static UniValue sendrawtransaction(const Config &config,
 }
 
 // clang-format off
-static const CRPCCommand commands[] = {
+static const ContextFreeRPCCommand commands[] = {
     //  category            name                      actor (function)        okSafeMode
     //  ------------------- ------------------------  ----------------------  ----------
     { "rawtransactions",    "getrawtransaction",      getrawtransaction,      true,  {"txid","verbose"} },

@@ -12,6 +12,7 @@
 #endif
 
 #include "amount.h"
+#include "blockfileinfo.h"
 #include "chain.h"
 #include "coins.h"
 #include "consensus/consensus.h"
@@ -79,9 +80,6 @@ static const unsigned int DEFAULT_DESCENDANT_SIZE_LIMIT = 101;
 /** Default for -mempoolexpiry, expiration time for mempool transactions in
  * hours */
 static const unsigned int DEFAULT_MEMPOOL_EXPIRY = 336;
-/** Maximum bytes for transactions to store for processing during reorg */
-static const unsigned int MAX_DISCONNECTED_TX_POOL_SIZE =
-    20 * DEFAULT_MAX_BLOCK_SIZE;
 /** The maximum size of a blk?????.dat file (since 0.8) */
 static const unsigned int MAX_BLOCKFILE_SIZE = 0x8000000; // 128 MiB
 /** The pre-allocation chunk size for blk?????.dat files (since 0.8) */
@@ -356,7 +354,7 @@ bool InitBlockIndex(const Config &config);
 /**
  * Load the block tree and coins database from disk.
  */
-bool LoadBlockIndex(const CChainParams &chainparams);
+bool LoadBlockIndex(const Config &config);
 
 /**
  * Update the chain tip based on database information.
@@ -443,8 +441,9 @@ bool IsUAHFenabled(const Config &config, const CBlockIndex *pindexPrev);
 /** Check if DAA HF has activated. */
 bool IsDAAEnabled(const Config &config, const CBlockIndex *pindexPrev);
 
-/** Check if May 15, 2018 HF has activated. */
-bool IsMonolithEnabled(const Config &config, const CBlockIndex *pindexPrev);
+/** Check if Nov 15, 2018 HF has activated. */
+bool IsMagneticAnomalyEnabled(const Config &config,
+                              const CBlockIndex *pindexPrev);
 
 /**
  * (try to) add transaction to memory pool
@@ -458,21 +457,12 @@ bool AcceptToMemoryPool(const Config &config, CTxMemPool &pool,
 /** Convert CValidationState to a human-readable message for logging */
 std::string FormatStateMessage(const CValidationState &state);
 
-/** Get the BIP9 state for a given deployment at the current tip. */
-ThresholdState VersionBitsTipState(const Consensus::Params &params,
-                                   Consensus::DeploymentPos pos);
-
-/** Get the block height at which the BIP9 deployment switched into the state
- * for the block building on the current tip. */
-int VersionBitsTipStateSinceHeight(const Consensus::Params &params,
-                                   Consensus::DeploymentPos pos);
-
 /**
  * Count ECDSA signature operations the old-fashioned (pre-0.6) way
  * @return number of sigops this transaction's outputs will produce when spent
  * @see CTransaction::FetchInputs
  */
-uint64_t GetSigOpCountWithoutP2SH(const CTransaction &tx);
+uint64_t GetSigOpCountWithoutP2SH(const CTransaction &tx, uint32_t flags);
 
 /**
  * Count ECDSA signature operations in pay-to-script-hash inputs.
@@ -484,18 +474,19 @@ uint64_t GetSigOpCountWithoutP2SH(const CTransaction &tx);
  * @see CTransaction::FetchInputs
  */
 uint64_t GetP2SHSigOpCount(const CTransaction &tx,
-                           const CCoinsViewCache &mapInputs);
+                           const CCoinsViewCache &mapInputs, uint32_t flags);
 
 /**
  * Compute total signature operation of a transaction.
  * @param[in] tx     Transaction for which we are computing the cost
  * @param[in] inputs Map of previous transactions that have outputs we're
  * spending
- * @param[out] flags Script verification flags
+ * @param[in] flags  Script verification flags
  * @return Total signature operation cost of tx
  */
 uint64_t GetTransactionSigOpCount(const CTransaction &tx,
-                                  const CCoinsViewCache &inputs, int flags);
+                                  const CCoinsViewCache &inputs,
+                                  uint32_t flags);
 
 /**
  * Check whether all inputs of this transaction are valid (no double spends,
@@ -516,15 +507,25 @@ bool CheckInputs(const CTransaction &tx, CValidationState &state,
                  const PrecomputedTransactionData &txdata,
                  std::vector<CScriptCheck> *pvChecks = nullptr);
 
-/** Apply the effects of this transaction on the UTXO set represented by view */
-void UpdateCoins(const CTransaction &tx, CCoinsViewCache &inputs, int nHeight);
-void UpdateCoins(const CTransaction &tx, CCoinsViewCache &inputs,
-                 CTxUndo &txundo, int nHeight);
+/**
+ * Mark all the coins corresponding to a given transaction inputs as spent.
+ */
+void SpendCoins(CCoinsViewCache &view, const CTransaction &tx, CTxUndo &txundo,
+                int nHeight);
+
+/**
+ * Apply the effects of this transaction on the UTXO set represented by view.
+ */
+void UpdateCoins(CCoinsViewCache &view, const CTransaction &tx, int nHeight);
+void UpdateCoins(CCoinsViewCache &view, const CTransaction &tx, CTxUndo &txundo,
+                 int nHeight);
 
 /** Transaction validation functions */
 
-/** Context-independent validity checks for coinbase and non-coinbase
- * transactions */
+/**
+ * Context-independent validity checks for coinbase and non-coinbase
+ * transactions.
+ */
 bool CheckRegularTransaction(const CTransaction &tx, CValidationState &state,
                              bool fCheckDuplicateInputs = true);
 bool CheckCoinbase(const CTransaction &tx, CValidationState &state,
@@ -641,7 +642,8 @@ bool CheckBlock(
  */
 bool ContextualCheckTransaction(const Config &config, const CTransaction &tx,
                                 CValidationState &state, int nHeight,
-                                int64_t nLockTimeCutoff);
+                                int64_t nLockTimeCutoff,
+                                int64_t nMedianTimePast);
 
 /**
  * This is a variant of ContextualCheckTransaction which computes the contextual

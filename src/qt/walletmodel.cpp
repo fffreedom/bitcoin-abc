@@ -12,6 +12,7 @@
 #include "recentrequeststablemodel.h"
 #include "transactiontablemodel.h"
 
+#include "config.h"
 #include "dstencode.h"
 #include "keystore.h"
 #include "net.h" // for g_connman
@@ -160,8 +161,9 @@ void WalletModel::updateTransaction() {
 void WalletModel::updateAddressBook(const QString &address,
                                     const QString &label, bool isMine,
                                     const QString &purpose, int status) {
-    if (addressTableModel)
+    if (addressTableModel) {
         addressTableModel->updateEntry(address, label, isMine, purpose, status);
+    }
 }
 
 void WalletModel::updateWatchOnlyFlag(bool fHaveWatchonly) {
@@ -170,7 +172,8 @@ void WalletModel::updateWatchOnlyFlag(bool fHaveWatchonly) {
 }
 
 bool WalletModel::validateAddress(const QString &address) {
-    return IsValidDestinationString(address.toStdString());
+    return IsValidDestinationString(address.toStdString(),
+                                    GetConfig().GetChainParams());
 }
 
 WalletModel::SendCoinsReturn
@@ -668,24 +671,24 @@ bool WalletModel::saveReceiveRequest(const std::string &sAddress,
     std::string key = "rr" + ss.str();
 
     LOCK(wallet->cs_wallet);
-    if (sRequest.empty())
-        return wallet->EraseDestData(dest, key);
-    else
-        return wallet->AddDestData(dest, key, sRequest);
+    return sRequest.empty() ? wallet->EraseDestData(dest, key)
+                            : wallet->AddDestData(dest, key, sRequest);
 }
 
-bool WalletModel::transactionCanBeAbandoned(uint256 hash) const {
+bool WalletModel::transactionCanBeAbandoned(const TxId &txid) const {
     LOCK2(cs_main, wallet->cs_wallet);
-    const CWalletTx *wtx = wallet->GetWalletTx(hash);
+    const CWalletTx *wtx = wallet->GetWalletTx(txid);
     if (!wtx || wtx->isAbandoned() || wtx->GetDepthInMainChain() > 0 ||
-        wtx->InMempool())
+        wtx->InMempool()) {
         return false;
+    }
+
     return true;
 }
 
-bool WalletModel::abandonTransaction(uint256 hash) const {
+bool WalletModel::abandonTransaction(const TxId &txid) const {
     LOCK2(cs_main, wallet->cs_wallet);
-    return wallet->AbandonTransaction(hash);
+    return wallet->AbandonTransaction(txid);
 }
 
 bool WalletModel::isWalletEnabled() {

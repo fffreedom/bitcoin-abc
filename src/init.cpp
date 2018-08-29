@@ -300,7 +300,7 @@ void OnRPCStopped() {
     LogPrint(BCLog::RPC, "RPC stopped.\n");
 }
 
-void OnRPCPreCommand(const CRPCCommand &cmd) {
+void OnRPCPreCommand(const ContextFreeRPCCommand &cmd) {
     // Observe safe mode.
     std::string strWarning = GetWarnings("rpc");
     if (strWarning != "" &&
@@ -694,9 +694,6 @@ std::string HelpMessage(HelpMessageMode mode) {
                       "more than <n> kilobytes of in-mempool descendants "
                       "(default: %u).",
                       DEFAULT_DESCENDANT_SIZE_LIMIT));
-        strUsage += HelpMessageOpt("-bip9params=deployment:start:end",
-                                   "Use given start/end times for specified "
-                                   "BIP9 deployment (regtest-only)");
     }
     strUsage += HelpMessageOpt(
         "-debug=<category>",
@@ -1116,9 +1113,9 @@ bool InitSanityCheck(void) {
 }
 
 static bool AppInitServers(Config &config, boost::thread_group &threadGroup) {
-    RPCServer::OnStarted(&OnRPCStarted);
-    RPCServer::OnStopped(&OnRPCStopped);
-    RPCServer::OnPreCommand(&OnRPCPreCommand);
+    RPCServerSignals::OnStarted(&OnRPCStarted);
+    RPCServerSignals::OnStopped(&OnRPCStopped);
+    RPCServerSignals::OnPreCommand(&OnRPCPreCommand);
     if (!InitHTTPServer(config)) return false;
     if (!StartRPC()) return false;
     if (!StartHTTPRPC()) return false;
@@ -1621,50 +1618,6 @@ bool AppInitParameterInteraction(Config &config) {
 
     nMaxTipAge = gArgs.GetArg("-maxtipage", DEFAULT_MAX_TIP_AGE);
 
-    if (gArgs.IsArgSet("-bip9params")) {
-        // Allow overriding BIP9 parameters for testing
-        if (!chainparams.MineBlocksOnDemand()) {
-            return InitError(
-                "BIP9 parameters may only be overridden on regtest.");
-        }
-        for (const std::string &strDeployment : gArgs.GetArgs("-bip9params")) {
-            std::vector<std::string> vDeploymentParams;
-            boost::split(vDeploymentParams, strDeployment,
-                         boost::is_any_of(":"));
-            if (vDeploymentParams.size() != 3) {
-                return InitError("BIP9 parameters malformed, expecting "
-                                 "deployment:start:end");
-            }
-            int64_t nStartTime, nTimeout;
-            if (!ParseInt64(vDeploymentParams[1], &nStartTime)) {
-                return InitError(
-                    strprintf("Invalid nStartTime (%s)", vDeploymentParams[1]));
-            }
-            if (!ParseInt64(vDeploymentParams[2], &nTimeout)) {
-                return InitError(
-                    strprintf("Invalid nTimeout (%s)", vDeploymentParams[2]));
-            }
-            bool found = false;
-            for (int j = 0; j < (int)Consensus::MAX_VERSION_BITS_DEPLOYMENTS;
-                 ++j) {
-                if (vDeploymentParams[0].compare(
-                        VersionBitsDeploymentInfo[j].name) == 0) {
-                    UpdateBIP9Parameters(Consensus::DeploymentPos(j),
-                                         nStartTime, nTimeout);
-                    found = true;
-                    LogPrintf("Setting BIP9 activation parameters for %s to "
-                              "start=%ld, timeout=%ld\n",
-                              vDeploymentParams[0], nStartTime, nTimeout);
-                    break;
-                }
-            }
-            if (!found) {
-                return InitError(
-                    strprintf("Invalid deployment (%s)", vDeploymentParams[0]));
-            }
-        }
-    }
-
     return true;
 }
 
@@ -1780,10 +1733,10 @@ bool AppInitMain(Config &config, boost::thread_group &threadGroup,
     threadGroup.create_thread(boost::bind(&TraceThread<CScheduler::Function>,
                                           "scheduler", serviceLoop));
 
-    /* Start the RPC server already.  It will be started in "warmup" mode
-     * and not really process calls already (but it will signify connections
-     * that the server is there and will be ready later).  Warmup mode will
-     * be disabled when initialisation is finished.
+    /* Start the RPC server.  It will be started in "warmup" mode and not
+     * process calls yet (but it will verify that the server is there and
+     * will be ready later).  Warmup mode will be completed when initialisation
+     * is finished.
      */
     if (gArgs.GetBoolArg("-server", false)) {
         uiInterface.InitMessage.connect(SetRPCWarmupStatus);
@@ -1792,8 +1745,6 @@ bool AppInitMain(Config &config, boost::thread_group &threadGroup,
                 _("Unable to start HTTP server. See debug log for details."));
         }
     }
-
-    int64_t nStart;
 
 // Step 5: verify wallet database integrity
 #ifdef ENABLE_WALLET
@@ -2010,6 +1961,7 @@ bool AppInitMain(Config &config, boost::thread_group &threadGroup,
               nCoinCacheUsage * (1.0 / 1024 / 1024),
               nMempoolSizeMax * (1.0 / 1024 / 1024));
 
+    int64_t nStart = 0;
     bool fLoaded = false;
     while (!fLoaded && !fRequestShutdown) {
         bool fReset = fReindex;
@@ -2045,7 +1997,7 @@ bool AppInitMain(Config &config, boost::thread_group &threadGroup,
                 }
                 if (fRequestShutdown) break;
 
-                if (!LoadBlockIndex(chainparams)) {
+                if (!LoadBlockIndex(config)) {
                     strLoadError = _("Error loading block database");
                     break;
                 }

@@ -30,68 +30,6 @@ static const int64_t MAX_FUTURE_BLOCK_TIME = 2 * 60 * 60;
  */
 static const int64_t TIMESTAMP_WINDOW = MAX_FUTURE_BLOCK_TIME;
 
-class CBlockFileInfo {
-public:
-    //!< number of blocks stored in file
-    unsigned int nBlocks;
-    //!< number of used bytes of block file
-    unsigned int nSize;
-    //!< number of used bytes in the undo file
-    unsigned int nUndoSize;
-    //!< lowest height of block in file
-    unsigned int nHeightFirst;
-    //!< highest height of block in file
-    unsigned int nHeightLast;
-    //!< earliest time of block in file
-    uint64_t nTimeFirst;
-    //!< latest time of block in file
-    uint64_t nTimeLast;
-
-    ADD_SERIALIZE_METHODS;
-
-    template <typename Stream, typename Operation>
-    inline void SerializationOp(Stream &s, Operation ser_action) {
-        READWRITE(VARINT(nBlocks));
-        READWRITE(VARINT(nSize));
-        READWRITE(VARINT(nUndoSize));
-        READWRITE(VARINT(nHeightFirst));
-        READWRITE(VARINT(nHeightLast));
-        READWRITE(VARINT(nTimeFirst));
-        READWRITE(VARINT(nTimeLast));
-    }
-
-    void SetNull() {
-        nBlocks = 0;
-        nSize = 0;
-        nUndoSize = 0;
-        nHeightFirst = 0;
-        nHeightLast = 0;
-        nTimeFirst = 0;
-        nTimeLast = 0;
-    }
-
-    CBlockFileInfo() { SetNull(); }
-
-    std::string ToString() const;
-
-    /** update statistics (does not update nSize) */
-    void AddBlock(unsigned int nHeightIn, uint64_t nTimeIn) {
-        if (nBlocks == 0 || nHeightFirst > nHeightIn) {
-            nHeightFirst = nHeightIn;
-        }
-        if (nBlocks == 0 || nTimeFirst > nTimeIn) {
-            nTimeFirst = nTimeIn;
-        }
-        nBlocks++;
-        if (nHeightIn > nHeightLast) {
-            nHeightLast = nHeightIn;
-        }
-        if (nTimeIn > nTimeLast) {
-            nTimeLast = nTimeIn;
-        }
-    }
-};
-
 struct CDiskBlockPos {
     int nFile;
     unsigned int nPos;
@@ -191,6 +129,15 @@ private:
     // Mask used to check if the block failed.
     static const uint32_t INVALID_MASK = FAILED_FLAG | FAILED_PARENT_FLAG;
 
+    // The block is being parked for some reason. It will be reconsidered if its
+    // chains grows.
+    static const uint32_t PARKED_FLAG = 0x80;
+    // One of the block's parent is parked.
+    static const uint32_t PARKED_PARENT_FLAG = 0x100;
+
+    // Mask used to check for parked blocks.
+    static const uint32_t PARKED_MASK = PARKED_FLAG | PARKED_PARENT_FLAG;
+
 public:
     explicit BlockStatus() : status(0) {}
 
@@ -226,6 +173,18 @@ public:
                            (hasFailedParent ? FAILED_PARENT_FLAG : 0));
     }
 
+    bool isParked() const { return status & PARKED_FLAG; }
+    BlockStatus withParked(bool parked = true) const {
+        return BlockStatus((status & ~PARKED_FLAG) |
+                           (parked ? PARKED_FLAG : 0));
+    }
+
+    bool hasParkedParent() const { return status & PARKED_PARENT_FLAG; }
+    BlockStatus withParkedParent(bool parkedParent = true) const {
+        return BlockStatus((status & ~PARKED_PARENT_FLAG) |
+                           (parkedParent ? PARKED_PARENT_FLAG : 0));
+    }
+
     /**
      * Check whether this block index entry is valid up to the passed validity
      * level.
@@ -242,6 +201,8 @@ public:
     BlockStatus withClearedFailureFlags() const {
         return BlockStatus(status & ~INVALID_MASK);
     }
+
+    bool isOnParkedChain() const { return status & PARKED_MASK; }
 
     ADD_SERIALIZE_METHODS;
 
@@ -394,7 +355,11 @@ public:
 
     int64_t GetBlockTimeMax() const { return int64_t(nTimeMax); }
 
-    int64_t GetHeaderTimeReceived() const { return nTimeReceived; }
+    int64_t GetHeaderReceivedTime() const { return nTimeReceived; }
+
+    int64_t GetReceivedTimeDiff() const {
+        return GetHeaderReceivedTime() - GetBlockTime();
+    }
 
     enum { nMedianTimeSpan = 11 };
 

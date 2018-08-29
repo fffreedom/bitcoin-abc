@@ -108,7 +108,7 @@ class WalletModel : public QObject {
 
 public:
     explicit WalletModel(const PlatformStyle *platformStyle, CWallet *wallet,
-                         OptionsModel *optionsModel, QObject *parent = 0);
+                         OptionsModel *optionsModel, QObject *parent = nullptr);
     ~WalletModel();
 
     // Returned by sendCoins
@@ -222,8 +222,8 @@ public:
     bool saveReceiveRequest(const std::string &sAddress, const int64_t nId,
                             const std::string &sRequest);
 
-    bool transactionCanBeAbandoned(uint256 hash) const;
-    bool abandonTransaction(uint256 hash) const;
+    bool transactionCanBeAbandoned(const TxId &txid) const;
+    bool abandonTransaction(const TxId &txid) const;
 
     static bool isWalletEnabled();
 

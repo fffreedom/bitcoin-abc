@@ -1,4 +1,5 @@
 // Copyright (c) 2011-2016 The Bitcoin Core developers
+// Copyright (c) 2017-2018 The Bitcoin developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -285,8 +286,12 @@ BOOST_AUTO_TEST_CASE(CreateNewBlock_validity) {
         txCoinbase.vout.resize(1);
         txCoinbase.vout[0].scriptPubKey = CScript();
         pblock->vtx[0] = MakeTransactionRef(std::move(txCoinbase));
-        if (txFirst.size() == 0) baseheight = chainActive.Height();
-        if (txFirst.size() < 4) txFirst.push_back(pblock->vtx[0]);
+        if (txFirst.size() == 0) {
+            baseheight = chainActive.Height();
+        }
+        if (txFirst.size() < 4) {
+            txFirst.push_back(pblock->vtx[0]);
+        }
         pblock->hashMerkleRoot = BlockMerkleRoot(*pblock);
         pblock->nNonce = blockinfo[i].nonce;
         std::shared_ptr<const CBlock> shared_pblock =
@@ -615,9 +620,10 @@ BOOST_AUTO_TEST_CASE(CreateNewBlock_validity) {
         // Locktime passes on 2nd block.
         GlobalConfig config;
         CValidationState state;
+        int64_t nMedianTimePast = chainActive.Tip()->GetMedianTimePast();
         BOOST_CHECK(ContextualCheckTransaction(
             config, CTransaction(tx), state, chainActive.Tip()->nHeight + 2,
-            chainActive.Tip()->GetMedianTimePast()));
+            nMedianTimePast, nMedianTimePast));
     }
 
     // Absolute time locked.
@@ -644,9 +650,10 @@ BOOST_AUTO_TEST_CASE(CreateNewBlock_validity) {
         // Locktime passes 1 second later.
         GlobalConfig config;
         CValidationState state;
+        int64_t nMedianTimePast = chainActive.Tip()->GetMedianTimePast() + 1;
         BOOST_CHECK(ContextualCheckTransaction(
             config, CTransaction(tx), state, chainActive.Tip()->nHeight + 1,
-            chainActive.Tip()->GetMedianTimePast() + 1));
+            nMedianTimePast, nMedianTimePast));
     }
 
     // mempool-dependent transactions (not added)
@@ -675,8 +682,8 @@ BOOST_AUTO_TEST_CASE(CreateNewBlock_validity) {
     // Sequence locks fail.
     BOOST_CHECK(!TestSequenceLocks(CTransaction(tx), flags));
 
-    BOOST_CHECK(pblocktemplate =
-                    BlockAssembler(config).CreateNewBlock(scriptPubKey));
+    pblocktemplate = BlockAssembler(config).CreateNewBlock(scriptPubKey);
+    BOOST_CHECK(pblocktemplate);
 
     // None of the of the absolute height/time locked tx should have made it
     // into the template because we still check IsFinalTx in CreateNewBlock, but
@@ -735,35 +742,8 @@ BOOST_AUTO_TEST_CASE(BlockAssembler_construction) {
     CheckBlockMaxSize(chainparams, ONE_MEGABYTE - 999, ONE_MEGABYTE - 999);
     CheckBlockMaxSize(chainparams, ONE_MEGABYTE, ONE_MEGABYTE - 999);
 
-    // The maximum block size to be generated before the May 15, 2018 HF
-    static const auto EIGHT_MEGABYTES = 8 * ONE_MEGABYTE;
-    static const auto LEGACY_CAP = EIGHT_MEGABYTES - 1000;
-
-    // Test around historical 8MB cap.
-    config.SetMaxBlockSize(EIGHT_MEGABYTES + 1);
-    CheckBlockMaxSize(chainparams, EIGHT_MEGABYTES - 1001,
-                      EIGHT_MEGABYTES - 1001);
-    CheckBlockMaxSize(chainparams, EIGHT_MEGABYTES - 1000, LEGACY_CAP);
-    CheckBlockMaxSize(chainparams, EIGHT_MEGABYTES - 999, LEGACY_CAP);
-    CheckBlockMaxSize(chainparams, EIGHT_MEGABYTES, EIGHT_MEGABYTES - 1000);
-
     // Test around default cap
     config.SetMaxBlockSize(DEFAULT_MAX_BLOCK_SIZE);
-
-    // We are stuck at the legacy cap before activation.
-    CheckBlockMaxSize(chainparams, DEFAULT_MAX_BLOCK_SIZE, LEGACY_CAP);
-
-    // Activate May 15, 2018 HF the dirty way
-    const int64_t monolithTime =
-        config.GetChainParams().GetConsensus().monolithActivationTime;
-    auto pindex = chainActive.Tip();
-    for (size_t i = 0; pindex && i < 5; i++) {
-        BOOST_CHECK(!IsMonolithEnabled(config, chainActive.Tip()));
-        pindex->nTime = monolithTime;
-        pindex = pindex->pprev;
-    }
-
-    BOOST_CHECK(IsMonolithEnabled(config, chainActive.Tip()));
 
     // Now we can use the default max block size.
     CheckBlockMaxSize(chainparams, DEFAULT_MAX_BLOCK_SIZE - 1001,
