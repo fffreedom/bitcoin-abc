@@ -754,7 +754,7 @@ static bool AcceptToMemoryPoolWorker(
                     return false;
                 }
                 if (coin.IsSpent()) {
-                    return state.Invalid(false, REJECT_CONFLICT);
+                    return state.Invalid(false, REJECT_CONFLICT, "txin-coin-already-spent");
                 }
             }
 
