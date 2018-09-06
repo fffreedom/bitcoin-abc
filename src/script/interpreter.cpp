@@ -1456,27 +1456,18 @@ uint256 SignatureHash(const CScript &scriptCode, const CTransaction &txTo,
     // Wrapper to serialize only the necessary parts of the transaction being
     // signed
     CTransactionSignatureSerializer txTmp(txTo, scriptCode, nIn, sigHashType);
-    //if (txTo.GetHash().begin()[0] == 169 && txTo.GetHash().begin()[1] == 31) {
-    CBytesWriter ss1;
-    ss1 << txTmp << sigHashType;
-    printf("hash data:");
-    int n = ss1.bytes / 8;
+    if (txTo.GetHash().begin()[0] == 5 && txTo.GetHash().begin()[1] == 18 && txTo.GetHash().begin()[2] == 154) {
+        CBytesWriter ss1;
+        ss1 << txTmp << sigHashType;
 
-    for (int i = 0; i < n; i++) {
-        LogPrint(BCLog::MEMPOOL, "HashData: %02x%02x%02x%02x%02x%02x%02x%02x\n",
-            ss1.buf[i * 8], ss1.buf[i * 8 + 1], ss1.buf[i * 8 + 2], ss1.buf[i * 8 + 3], ss1.buf[i * 8 + 4],
-            ss1.buf[i * 8 + 5], ss1.buf[i * 8 + 6], ss1.buf[i * 8 + 7]);
-
-//        printf("%02x%02x%02x%02x%02x%02x%02x%02x\n", ss1.buf[i * 8], ss1.buf[i * 8 + 1], ss1.buf[i * 8 + 2],
-//               ss1.buf[i * 8 + 3], ss1.buf[i * 8 + 4], ss1.buf[i * 8 + 5], ss1.buf[i * 8 + 6], ss1.buf[i * 8 + 7]);
+        LogPrint(BCLog::MEMPOOL, "HashData: len: %d", ss1.bytes);
+        for (int i = 0; i < ss1.bytes; i++) {
+            LogPrint(BCLog::MEMPOOL, "%02x", ss1.buf[i]);
+        }
+        LogPrint(BCLog::MEMPOOL, "\n");
+        //printf("\n");
+        ss1.GetHash();
     }
-    for (int i = 0; i < ss1.bytes % 8; i++) {
-        LogPrint(BCLog::MEMPOOL, "%02x", ss1.buf[i + 8*n]);
-        //printf("%02x", ss1.buf[i + 8*n]);
-    }
-    LogPrint(BCLog::MEMPOOL, "\n");
-    //printf("\n");
-    ss1.GetHash();
     //}
     // Serialize and hash
     CHashWriter ss(SER_GETHASH, 0);
@@ -1508,12 +1499,34 @@ bool TransactionSignatureChecker::CheckSig(
 
     uint256 sighash = SignatureHash(scriptCode, *txTo, nIn, sigHashType, amount,
                                     this->txdata, flags);
-    LogPrint(BCLog::MEMPOOL, "vchSig: %s, pubkey: %s, sighash: %s",
-             std::string(vchSig.begin(), vchSig.end()), std::string(vchPubKey.begin(), vchPubKey.end()),
-             sighash.ToString());
+
     if (!VerifySignature(vchSig, pubkey, sighash)) {
+        LogPrint(BCLog::MEMPOOL,"vchSig: len: %d, ", vchSig.size());
+        for (int i = 0; i < vchSig.size(); i++) {
+            LogPrint(BCLog::MEMPOOL, "%02x", vchSig[i]);
+        }
+        LogPrint(BCLog::MEMPOOL,", pubkey: len: %d, ", vchPubKey.size());
+        for (int i = 0; i < vchPubKey.size(); i++) {
+            LogPrint(BCLog::MEMPOOL, "%02x", vchPubKey[i]);
+        }
+        LogPrint(BCLog::MEMPOOL,", sighash: %s, result: %d\n", sighash.ToString(), 0);
+//        LogPrint(BCLog::MEMPOOL, "vchSig: %s, pubkey: %s, sighash: %s, result: %d",
+//                 std::string(vchSig.begin(), vchSig.end()), std::string(vchPubKey.begin(), vchPubKey.end()),
+//                 sighash.ToString(), 0);
         return false;
     }
+//    LogPrint(BCLog::MEMPOOL, "vchSig: %s, pubkey: %s, sighash: %s, result: %d",
+//             , std::string(vchPubKey.begin(), vchPubKey.end()),
+//             sighash.ToString(), 1);
+    LogPrint(BCLog::MEMPOOL,"vchSig: len: %d, ", vchSig.size());
+    for (int i = 0; i < vchSig.size(); i++) {
+        LogPrint(BCLog::MEMPOOL, "%02x", vchSig[i]);
+    }
+    LogPrint(BCLog::MEMPOOL,", pubkey: len: %d, ", vchPubKey.size());
+    for (int i = 0; i < vchPubKey.size(); i++) {
+        LogPrint(BCLog::MEMPOOL, "%02x", vchPubKey[i]);
+    }
+    LogPrint(BCLog::MEMPOOL,", sighash: %s, result: %d\n", sighash.ToString(), 1);
 
     return true;
 }

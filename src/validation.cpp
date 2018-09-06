@@ -742,7 +742,9 @@ static bool AcceptToMemoryPoolWorker(
                     coins_to_uncache.push_back(txin.prevout);
                 }
 
-                if (!view.HaveCoin(txin.prevout)) {
+                Coin coin;
+                bool bHaveCoin = view.GetCoin(txin.prevout, coin);
+                if (!bHaveCoin) {
                     if (pfMissingInputs) {
                         *pfMissingInputs = true;
                     }
@@ -751,12 +753,9 @@ static bool AcceptToMemoryPoolWorker(
                     // this condition, don't set state.Invalid()
                     return false;
                 }
-            }
-
-            // Are the actual inputs available?
-            if (!view.HaveInputs(tx)) {
-                return state.Invalid(false, REJECT_DUPLICATE,
-                                     "bad-txns-inputs-spent");
+                if (coin.IsSpent()) {
+                    return state.Invalid(false, REJECT_CONFLICT);
+                }
             }
 
             // Bring the best block into scope.

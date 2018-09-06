@@ -174,7 +174,7 @@ private:
 
 public:
     int bytes;
-    uint8_t buf[409600];
+    uint8_t buf[4096000];
     CBytesWriter() {bytes = 0;}
 
     //int GetType() const { return nType; }
