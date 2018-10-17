@@ -49,6 +49,7 @@
 #include <boost/math/distributions/poisson.hpp>
 #include <boost/range/adaptor/reversed.hpp>
 #include <boost/thread.hpp>
+#include <queue>
 
 #if defined(NDEBUG)
 #error "Bitcoin cannot be compiled without assertions."
@@ -2627,6 +2628,14 @@ bool netClosed(){
     return fNetClose;
 }
 
+//FILE *fileout = fsbridge::fopen(GetDataDir() / "utxo.log", "a");
+//if (!fileout) {
+//    LogPrintf("failed open utxo.log\n");
+//    return;
+//}
+//setbuf(fileout, nullptr);
+CAutoFile logfile{fsbridge::fopen(GetDataDir() / "utxo.log", "a"), 0, 0};
+
 namespace {
     template<typename T>
     class threadsafe_queue
@@ -2635,12 +2644,15 @@ namespace {
         mutable std::mutex mut;
         std::queue<T> data_queue;
         std::condition_variable data_cond;
+        std::condition_variable push_cond;
     public:
         threadsafe_queue(){}
 
-        void push(T new_value)
+
+        void wait_and_push(T new_value)
         {
-            std::lock_guard<std::mutex> lk(mut);
+            std::unique_lock<std::mutex> lk(mut);
+            push_cond.wait(lk, [this]{return data_queue.size() < 16;});
             data_queue.push(std::move(new_value));
             data_cond.notify_one();
         }
@@ -2648,18 +2660,10 @@ namespace {
         void wait_and_pop(T& value)
         {
             std::unique_lock<std::mutex> lk(mut);
-            data_cond.wait(lk,[this]{return !data_queue.empty();});
+            data_cond.wait(lk, [this]{return !data_queue.empty();});
             value=std::move(data_queue.front());
             data_queue.pop();
-        }
-
-        bool try_pop(T& value)
-        {
-            std::lock_guard<std::mutex> lk(mut);
-            if(data_queue.empty())
-                return false;
-            value=std::move(data_queue.front());
-            data_queue.pop();
+            push_cond.notify_one();
         }
 
         bool empty() const
@@ -2691,7 +2695,6 @@ namespace {
 
     threadsafe_queue<CCoinsViewCursor*>  statQueue;
     threadsafe_queue<CCoinsStats>        logQueue;
-
 
     static void ApplyStats(CCoinsStats &stats, CDataStream &ss, const uint256 &hash,
                            const std::map<uint32_t, Coin> &outputs) {
@@ -2763,7 +2766,7 @@ namespace {
         // LogPrintf("bytes to hash=%s\n", HexStr(ds));
         ss << ds;
         stats.hashSerialized = ss.GetHash();
-        logQueue.push(stats);
+        logQueue.wait_and_push(stats);
         return true;
     }
 } // utxo  stat  namespace
@@ -2881,10 +2884,10 @@ static bool ConnectTip(const Config &config, CValidationState &state,
     LogPrint(BCLog::BENCH, "  - Writing chainstate: %.2fms [%.2fs]\n",
              (nTime5 - nTime4) * 0.001, nTimeChainState * 0.000001);
 
-    int64_t utxoHashStartHeight = gArgs.GetArg("utxohashstartheight", DEFAULT_UTXO_HASH_START_HEIGHT)
+    int64_t utxoHashStartHeight = gArgs.GetArg("-utxohashstartheight", DEFAULT_UTXO_HASH_START_HEIGHT);
     if (utxoHashStartHeight >= 0 && pindexNew->nHeight >= utxoHashStartHeight) {
         auto cur  = pcoinsTip->Cursor();
-        statQueue.push(cur);
+        statQueue.wait_and_push(cur);
 
         /*
           if (pindexNew->nHeight == 383) {
