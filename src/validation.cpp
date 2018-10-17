@@ -2290,7 +2290,7 @@ bool netClosed(){
 //    return;
 //}
 //setbuf(fileout, nullptr);
-CAutoFile logfile{fsbridge::fopen(GetDataDir() / "utxo.log", "a"), 0, 0};
+//CAutoFile logfile{fsbridge::fopen(GetDataDir() / "utxo.log", "a"), 0, 0};
 
 namespace {
     template<typename T>
