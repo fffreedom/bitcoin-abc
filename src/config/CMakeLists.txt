@@ -12,7 +12,7 @@ set(PACKAGE_NAME "Bitcoin ABC")
 # Version
 set(CLIENT_VERSION_MAJOR 0)
 set(CLIENT_VERSION_MINOR 18)
-set(CLIENT_VERSION_REVISION 1)
+set(CLIENT_VERSION_REVISION 3)
 set(CLIENT_VERSION_BUILD 0)
 
 option(CLIENT_VERSION_IS_RELEASE "Build a release version" OFF)
@@ -108,11 +108,9 @@ check_builtin_exist(__builtin_clzll HAVE_DECL___BUILTIN_CLZLL)
 
 # Various system libraries
 check_symbol_exists(strnlen "string.h" HAVE_DECL_STRNLEN)
+check_symbol_exists(daemon "unistd.h" HAVE_DECL_DAEMON)
 
 # OpenSSL functionality
-include(BrewHelper)
-find_brew_prefix(OPENSSL_ROOT_DIR openssl)
-find_package(OpenSSL REQUIRED)
 set(CMAKE_REQUIRED_INCLUDES ${OPENSSL_CRYPTO_INCLUDES})
 set(CMAKE_REQUIRED_LIBRARIES ${OPENSSL_CRYPTO_LIBRARY})
 check_symbol_exists(EVP_MD_CTX_new "openssl/evp.h" HAVE_DECL_EVP_MD_CTX_NEW)
