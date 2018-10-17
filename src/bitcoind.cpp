@@ -110,6 +110,7 @@ bool AppInit(int argc, char *argv[]) {
                     gArgs.GetArg("-datadir", "").c_str());
             return false;
         }
+        fprintf(stdout, "Data dir is \"%s\" \n", gArgs.GetArg("-datadir", "").c_str());
         try {
             gArgs.ReadConfigFile(gArgs.GetArg("-conf", BITCOIN_CONF_FILENAME));
         } catch (const std::exception &e) {
