@@ -62,6 +62,7 @@ add_test_to_suite(bitcoin test_bitcoin
 	cashaddrenc_tests.cpp
 	checkdatasig_tests.cpp
 	checkpoints_tests.cpp
+	checkqueue_tests.cpp
 	coins_tests.cpp
 	compress_tests.cpp
 	config_tests.cpp
@@ -132,8 +133,6 @@ target_include_directories(test_bitcoin
 	PUBLIC
 		# To access the generated json headers.
 		${CMAKE_CURRENT_BINARY_DIR}
-	PRIVATE
-		${OPENSSL_INCLUDE_DIR}
 )
 
 find_package(Boost 1.58 REQUIRED unit_test_framework)

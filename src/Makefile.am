@@ -93,6 +93,8 @@ BITCOIN_CORE_H = \
   blockencodings.h \
   blockfileinfo.h \
   blockindexworkcomparator.h \
+  blockstatus.h \
+  blockvalidity.h \
   cashaddr.h \
   cashaddrenc.h \
   chain.h \
@@ -109,10 +111,13 @@ BITCOIN_CORE_H = \
   compat/sanity.h \
   compressor.h \
   config.h \
+  consensus/activation.h \
   consensus/consensus.h \
+  consensus/tx_verify.h \
   core_io.h \
   core_memusage.h \
   cuckoocache.h \
+  diskblockpos.h \
   dstencode.h \
   fs.h \
   globals.h \
@@ -181,6 +186,8 @@ BITCOIN_CORE_H = \
   wallet/db.h \
   wallet/finaltx.h \
   wallet/rpcdump.h \
+  wallet/fees.h \
+  wallet/init.h \
   wallet/rpcwallet.h \
   wallet/wallet.h \
   wallet/walletdb.h \
@@ -208,6 +215,8 @@ libbitcoin_server_a_SOURCES = \
   chain.cpp \
   checkpoints.cpp \
   config.cpp \
+  consensus/activation.cpp \
+  consensus/tx_verify.cpp \
   globals.cpp \
   httprpc.cpp \
   httpserver.cpp \
@@ -261,6 +270,8 @@ libbitcoin_wallet_a_SOURCES = \
   wallet/crypter.cpp \
   wallet/db.cpp \
   wallet/finaltx.cpp \
+  wallet/fees.cpp \
+  wallet/init.cpp \
   wallet/rpcdump.cpp \
   wallet/rpcwallet.cpp \
   wallet/wallet.cpp \
