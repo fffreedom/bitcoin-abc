@@ -1456,18 +1456,18 @@ uint256 SignatureHash(const CScript &scriptCode, const CTransaction &txTo,
     // Wrapper to serialize only the necessary parts of the transaction being
     // signed
     CTransactionSignatureSerializer txTmp(txTo, scriptCode, nIn, sigHashType);
-    if (txTo.GetHash().begin()[0] == 5 && txTo.GetHash().begin()[1] == 18 && txTo.GetHash().begin()[2] == 154) {
-        CBytesWriter ss1;
-        ss1 << txTmp << sigHashType;
-
-        LogPrint(BCLog::MEMPOOL, "HashData: len: %d", ss1.bytes);
-        for (int i = 0; i < ss1.bytes; i++) {
-            LogPrint(BCLog::MEMPOOL, "%02x", ss1.buf[i]);
-        }
-        LogPrint(BCLog::MEMPOOL, "\n");
-        //printf("\n");
-        ss1.GetHash();
-    }
+//    if (txTo.GetHash().begin()[0] == 5 && txTo.GetHash().begin()[1] == 18 && txTo.GetHash().begin()[2] == 154) {
+//        CBytesWriter ss1;
+//        ss1 << txTmp << sigHashType;
+//
+//        LogPrint(BCLog::MEMPOOL, "HashData: len: %d", ss1.bytes);
+//        for (int i = 0; i < ss1.bytes; i++) {
+//            LogPrint(BCLog::MEMPOOL, "%02x", ss1.buf[i]);
+//        }
+//        LogPrint(BCLog::MEMPOOL, "\n");
+//        //printf("\n");
+//        ss1.GetHash();
+//    }
     //}
     // Serialize and hash
     CHashWriter ss(SER_GETHASH, 0);

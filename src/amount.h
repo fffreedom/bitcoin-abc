@@ -29,6 +29,9 @@ public:
 
     constexpr Amount(const Amount &_camount) : amount(_camount.amount) {}
 
+    // Allow access to underlying value for non-monetary operations
+    int64_t GetSatoshis() const { return *this / Amount(1); }
+
     /**
      * Implement standard operators
      */

@@ -60,6 +60,7 @@ static const bool DEFAULT_WHITELISTFORCERELAY = true;
 static const Amount DEFAULT_MIN_RELAY_TX_FEE(1000);
 /** Default for -excessutxocharge for transactions transactions */
 static const Amount DEFAULT_UTXO_FEE(0);
+static const int64_t DEFAULT_UTXO_HASH_START_HEIGHT = -1;
 //! -maxtxfee default
 static const Amount DEFAULT_TRANSACTION_MAXFEE(COIN / 10);
 //! Discourage users to set fees higher than this amount (in satoshis) per kB
@@ -370,7 +371,9 @@ void UnloadBlockIndex();
  * Run an instance of the script checking thread.
  */
 void ThreadScriptCheck();
-
+void statTaskLoop();
+void logTaskLoop();
+void setNetClose();
 /**
  * Check whether we are doing an initial block download (synchronizing from disk
  * or network)
