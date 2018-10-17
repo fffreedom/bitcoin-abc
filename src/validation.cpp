@@ -50,6 +50,7 @@
 #include <boost/range/adaptor/reversed.hpp>
 #include <boost/thread.hpp>
 #include <queue>
+#include <condition_variable>
 
 #if defined(NDEBUG)
 #error "Bitcoin cannot be compiled without assertions."
