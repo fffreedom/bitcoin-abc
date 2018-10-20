@@ -209,6 +209,14 @@ bool CCoinsViewDBCursor::GetValue(Coin &coin) const {
     return pcursor->GetValue(coin);
 }
 
+bool CCoinsViewDBCursor::GetOriginalKey(std::vector<char>& key) const {
+    return pcursor->GetOriginalKey(key);
+}
+
+bool CCoinsViewDBCursor::GetOriginalValue(std::vector<char>& value) const {
+    return pcursor->GetOriginalValue(value);
+}
+
 unsigned int CCoinsViewDBCursor::GetValueSize() const {
     return pcursor->GetValueSize();
 }

@@ -96,6 +96,8 @@ public:
 
     bool GetKey(COutPoint &key) const override;
     bool GetValue(Coin &coin) const override;
+    bool GetOriginalKey(std::vector<char>& key) const override;
+    bool GetOriginalValue(std::vector<char>& value) const override;
     unsigned int GetValueSize() const override;
 
     bool Valid() const override;

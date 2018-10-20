@@ -123,6 +123,8 @@ public:
 
     virtual bool GetKey(COutPoint &key) const = 0;
     virtual bool GetValue(Coin &coin) const = 0;
+    virtual bool GetOriginalKey(std::vector<char>& key) const = 0;
+    virtual bool GetOriginalValue(std::vector<char>& value) const = 0;
     virtual unsigned int GetValueSize() const = 0;
 
     virtual bool Valid() const = 0;

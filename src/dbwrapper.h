@@ -140,7 +140,7 @@ public:
 
     void Next();
 
-    bool GetK(std::vector<char>& key) {
+    bool GetOriginalKey(std::vector<char>& key) {
         leveldb::Slice slKey = piter->key();
         try{
             key.assign(slKey.data(), slKey.data() + slKey.size());
@@ -151,7 +151,7 @@ public:
         return true;
     }
 
-    bool GetV(std::vector<char>& val) {
+    bool GetOriginalValue(std::vector<char>& val) {
         leveldb::Slice slValue = piter->value();
         try{
             val.assign(slValue.data(), slValue.data() + slValue.size());
