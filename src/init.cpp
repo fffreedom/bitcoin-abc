@@ -1787,6 +1787,9 @@ bool AppInitMain(Config &config,
             boost::thread t(&statTaskLoop);
             t.detach();
         }
+    } else {
+        boost::thread t(&statTaskLoop);
+        t.detach();
     }
     boost::thread t(&logTaskLoop);
     t.detach();

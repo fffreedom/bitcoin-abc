@@ -225,6 +225,10 @@ bool CCoinsViewDBCursor::Valid() const {
     return keyTmp.first == DB_COIN;
 }
 
+bool CCoinsViewDBCursor::OriginalValid() const {
+    return pcursor->Valid();
+}
+
 void CCoinsViewDBCursor::Next() {
     pcursor->Next();
     CoinEntry entry(&keyTmp.second);
@@ -235,6 +239,10 @@ void CCoinsViewDBCursor::Next() {
     } else {
         keyTmp.first = entry.key;
     }
+}
+
+void CCoinsViewDBCursor::OriginalNext() {
+    pcursor->Next();
 }
 
 bool CBlockTreeDB::WriteBatchSync(

@@ -101,7 +101,9 @@ public:
     unsigned int GetValueSize() const override;
 
     bool Valid() const override;
+    bool OriginalValid() const override;
     void Next() override;
+    void OriginalNext() override;
 
 private:
     CCoinsViewDBCursor(CDBIterator *pcursorIn, const uint256 &hashBlockIn)
