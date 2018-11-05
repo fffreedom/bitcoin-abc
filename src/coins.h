@@ -128,7 +128,9 @@ public:
     virtual unsigned int GetValueSize() const = 0;
 
     virtual bool Valid() const = 0;
+    virtual bool OriginalValid() const = 0;
     virtual void Next() = 0;
+    virtual void OriginalNext() = 0;
 
     //! Get best block at the time this cursor was created
     const uint256 &GetBestBlock() const { return hashBlock; }

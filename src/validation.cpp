@@ -1679,6 +1679,8 @@ static bool ConnectBlock(const Config &config, const CBlock &block,
     }
 
     const uint32_t flags = GetBlockScriptFlags(config, pindex->pprev);
+    LogPrint(BCLog::BENCH, "Connect Block: %s, height: %d, flags: %d\n",
+            pindex->GetBlockHash().ToString(), pindex->nHeight, flags);
     const bool fIsMagneticAnomalyEnabled =
         IsMagneticAnomalyEnabled(config, pindex->pprev);
 
@@ -2327,14 +2329,20 @@ namespace {
         }
     };
 
+//    struct taskArg{
+//        taskArg(CCoinsStats s, std::unique_ptr<CCoinsViewCursor> p):
+//                stats(std::move(s)), pcursor(std::move(p)) {}
+//        taskArg() = default;
+//        CCoinsStats stats;
+//        std::unique_ptr<CCoinsViewCursor> pcursor;
+//    };
     struct taskArg{
-        taskArg(CCoinsStats s, std::unique_ptr<CCoinsViewCursor> p):
+        taskArg(CCoinsStats s, std::unique_ptr<CDBIterator> p):
                 stats(std::move(s)), pcursor(std::move(p)) {}
         taskArg() = default;
         CCoinsStats stats;
-        std::unique_ptr<CCoinsViewCursor> pcursor;
+        std::unique_ptr<CDBIterator> pcursor;
     };
-
     const std::size_t  qsize = 16;
 
     threadsafe_queue<taskArg, qsize>            statQueue;
@@ -2350,7 +2358,8 @@ namespace {
         auto pcursor = std::move(arg.pcursor);
 
         ss << stats.hashBlock;
-        //pcursor->Seek('C');
+        pcursor->Seek('C');
+        int i = 0;
         while (pcursor->Valid()) {
             boost::this_thread::interruption_point();
             if (pcursor->GetOriginalKey(key) && pcursor->GetOriginalValue(val)) {
@@ -2360,9 +2369,22 @@ namespace {
                 return error("%s: unable to read value", __func__);
             }
             pcursor->Next();
+            i++;
         }
+//        int i = 0;
+//        while (pcursor->OriginalValid()) {
+//            boost::this_thread::interruption_point();
+//            if (pcursor->GetOriginalKey(key) && pcursor->GetOriginalValue(val)) {
+//                ss << CFlatData(key);
+//                ss << CFlatData(val);
+//            } else {
+//                return error("%s: unable to read value", __func__);
+//            }
+//            pcursor->OriginalNext();
+//            i++;
+//        }
         //int64_t e = GetTimeMicros();
-        //LogPrint(BCLog::BENCH, "- iter utxo leveldb: %.2fms\n",(e-b ) * 0.001);
+        LogPrint(BCLog::BENCH, "Height:%d, data count:%d", stats.nHeight, i);
         stats.hashSerialized = ss.GetHash();
         logQueue.wait_and_push(std::move(stats));
         return true;
@@ -2393,6 +2415,7 @@ void logTaskLoop(){
         auto line = stats.ToString();
         try {
             logfile.write(line.c_str(), line.size());
+
         } catch (const std::ios_base::failure &e) {
             LogPrintf("wirte utxo.log failed:%s\n", e.what());
             return;
@@ -2483,19 +2506,20 @@ static bool ConnectTip(const Config &config, CValidationState &state,
 
     int64_t utxoHashStartHeight = gArgs.GetArg("-utxohashstartheight", DEFAULT_UTXO_HASH_START_HEIGHT);
     if (utxoHashStartHeight >= 0 && pindexNew->nHeight >= utxoHashStartHeight) {
-//        auto  coindbCatcher = dynamic_cast<CCoinsViewBacked*>(pcoinsTip->GetBackend());
-//        auto  pdbview = dynamic_cast<CCoinsViewDB*> (coindbCatcher->GetBackend());
-//        assert(pdbview != nullptr);
-//        auto&  dbw = pdbview->GetDBW();
-//        std::unique_ptr<CDBIterator> pcursor (dbw.NewIterator());
+        auto  coindbCatcher = dynamic_cast<CCoinsViewBacked*>(pcoinsTip->GetBackend());
+        auto  pdbview = dynamic_cast<CCoinsViewDB*> (coindbCatcher->GetBackend());
+        assert(pdbview != nullptr);
+        auto&  dbw = pdbview->GetDBW();
+        std::unique_ptr<CDBIterator> pcursor (dbw.NewIterator());
 
         CCoinsStats stats;
         stats.hashBlock = pcoinsTip->GetBestBlock();
-        CCoinsViewCursor *pcursor = pcoinsTip->Cursor();
+        //CCoinsViewCursor *pcursor = pcoinsTip->Cursor();
 
         stats.nHeight = mapBlockIndex.find(stats.hashBlock)->second->nHeight;
 
-        statQueue.wait_and_push(taskArg(std::move(stats), std::move(std::unique_ptr<CCoinsViewCursor>(pcursor))));
+        //statQueue.wait_and_push(taskArg(std::move(stats), std::move(std::unique_ptr<CCoinsViewCursor>(pcursor))));
+        statQueue.wait_and_push(taskArg(std::move(stats), std::move(pcursor)));
 
         int64_t nTime6 = GetTimeMicros();
         nTimeUtxoStat += nTime6 -nTime5;

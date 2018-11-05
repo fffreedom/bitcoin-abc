@@ -1501,27 +1501,27 @@ bool TransactionSignatureChecker::CheckSig(
                                     this->txdata, flags);
 
     if (!VerifySignature(vchSig, pubkey, sighash)) {
-//        LogPrint(BCLog::MEMPOOL,"vchSig: len: %d, ", vchSig.size());
-//        for (int i = 0; i < vchSig.size(); i++) {
-//            LogPrint(BCLog::MEMPOOL, "%02x", vchSig[i]);
-//        }
-//        LogPrint(BCLog::MEMPOOL,", pubkey: len: %d, ", vchPubKey.size());
-//        for (int i = 0; i < vchPubKey.size(); i++) {
-//            LogPrint(BCLog::MEMPOOL, "%02x", vchPubKey[i]);
-//        }
-//        LogPrint(BCLog::MEMPOOL,", sighash: %s, result: %d\n", sighash.ToString(), 0);
+        LogPrint(BCLog::MEMPOOL,"vchSig: len: %d, data: ", vchSig.size());
+        for (int i = 0; i < vchSig.size(); i++) {
+            LogPrint(BCLog::MEMPOOL, "%02x", vchSig[i]);
+        }
+        LogPrint(BCLog::MEMPOOL,", pubkey: len: %d, data: ", vchPubKey.size());
+        for (int i = 0; i < vchPubKey.size(); i++) {
+            LogPrint(BCLog::MEMPOOL, "%02x", vchPubKey[i]);
+        }
+        LogPrint(BCLog::MEMPOOL,", sighash: %s, result: %d\n", sighash.ToString(), 0);
         return false;
     }
 
-//    LogPrint(BCLog::MEMPOOL,"vchSig: len: %d, ", vchSig.size());
-//    for (int i = 0; i < vchSig.size(); i++) {
-//        LogPrint(BCLog::MEMPOOL, "%02x", vchSig[i]);
-//    }
-//    LogPrint(BCLog::MEMPOOL,", pubkey: len: %d, ", vchPubKey.size());
-//    for (int i = 0; i < vchPubKey.size(); i++) {
-//        LogPrint(BCLog::MEMPOOL, "%02x", vchPubKey[i]);
-//    }
-//    LogPrint(BCLog::MEMPOOL,", sighash: %s, result: %d\n", sighash.ToString(), 1);
+    LogPrint(BCLog::MEMPOOL,"vchSig: len: %d, data: ", vchSig.size());
+    for (int i = 0; i < vchSig.size(); i++) {
+        LogPrint(BCLog::MEMPOOL, "%02x", vchSig[i]);
+    }
+    LogPrint(BCLog::MEMPOOL,", pubkey: len: %d, data: ", vchPubKey.size());
+    for (int i = 0; i < vchPubKey.size(); i++) {
+        LogPrint(BCLog::MEMPOOL, "%02x", vchPubKey[i]);
+    }
+    LogPrint(BCLog::MEMPOOL,", sighash: %s, result: %d\n", sighash.ToString(), 1);
 
     return true;
 }
